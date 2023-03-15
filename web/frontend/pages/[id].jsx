@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useAppQuery } from "../hooks";
 
 import { useNavigate } from "@shopify/app-bridge-react";
@@ -17,7 +17,7 @@ import {
   TextField,
 } from "@shopify/polaris";
 
-import { TypeMinor, ViewMajor } from "@shopify/polaris-icons";
+import { TypeMinor, ViewMajor, DuplicateMinor } from "@shopify/polaris-icons";
 import {
   FaBold,
   FaItalic,
@@ -34,10 +34,28 @@ export default function PageEdit() {
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {});
+
+  const navigate = useNavigate();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [theme, setTheme] = useState("today");
+  const handleTitleChange = useCallback((value) => setTitle(value), []);
+  const handleContentChange = useCallback((value) => setContent(value), []);
+  const [selected, setSelected] = useState(["Visible"]);
+  const [isSetDate, setIsSetDate] = useState(false);
+  const [editWithSeo, setEditWithSeo] = useState(false);
+  const [titleSeo, setTitleSeo] = useState("");
+  const [descrSeo, setDecrSeo] = useState("");
+  const [urlSeo, setUrlSeo] = useState("");
+
   const { data, error, refetch } = useAppQuery({
     url: `/api/pages?id=${id}`,
     reactQueryOptions: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log(data);
+        setTitle(data.title);
+        setContent(data.body_html);
         setIsLoading(false);
       },
       onError: (error) => {
@@ -45,21 +63,6 @@ export default function PageEdit() {
       },
     },
   });
-
-  console.log(data);
-
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [textValue, setTextValue] = useState("");
-  const [theme, setTheme] = useState("today");
-  const handleEmailChange = useCallback((value) => setEmail(value), []);
-  const handleContentChange = useCallback((value) => setTextValue(value), []);
-  const [selected, setSelected] = useState(["Visible"]);
-  const [isSetDate, setIsSetDate] = useState(false);
-  const [editWithSeo, setEditWithSeo] = useState(false);
-  const [titleSeo, setTitleSeo] = useState("");
-  const [descrSeo, setDecrSeo] = useState("");
-  const [urlSeo, setUrlSeo] = useState("");
 
   const handleChangeTitleSeo = useCallback((value) => {
     setTitleSeo(value);
@@ -94,26 +97,22 @@ export default function PageEdit() {
       }}
       title={data && data.title}
       titleMetadata={data && data.published_at ? null : <Badge>Hidden</Badge>}
-      primaryAction={{ content: "Save", disabled: true, icon: ViewMajor }}
       secondaryActions={[
-        {
-          content: "Duplicate",
-          accessibilityLabel: "Secondary action label",
-          onAction: () => alert("Duplicate action"),
-        },
-        {
-          content: "View on your store",
-          onAction: () => alert("View on your store action"),
-        },
+        { content: "Duplicate", icon: DuplicateMinor },
+        { content: "Preview page", icon: ViewMajor },
       ]}
+      pagination={{
+        hasPrevious: true,
+        hasNext: true,
+      }}
     >
       <Form>
         <Layout>
           <Layout.Section>
             <LegacyCard sectioned>
               <TextField
-                value={email}
-                onChange={handleEmailChange}
+                value={title}
+                onChange={handleTitleChange}
                 label="Title"
                 type="email"
                 autoComplete="email"
@@ -122,8 +121,10 @@ export default function PageEdit() {
               <div style={{ marginTop: "16px" }}>
                 <Text>Content</Text>
                 <LegacyCard>
-                  <LegacyCard.Section>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                  <LegacyCard>
+                    <div
+                      style={{ display: "flex", gap: "8px", padding: "8px" }}
+                    >
                       <ButtonGroup segmented>
                         <Button icon={TypeMinor} />
                         <Button icon={<FaBold />} />
@@ -142,13 +143,14 @@ export default function PageEdit() {
                         <Button icon={<FaAlignLeft />} />
                       </ButtonGroup>
                     </div>
-                  </LegacyCard.Section>
-                  <LegacyCard.Section>
+                  </LegacyCard>
+                  <LegacyCard.Subsection>
                     <TextField
-                      value={textValue}
+                      value={content}
+                      multiline={4}
                       onChange={handleContentChange}
                     ></TextField>
-                  </LegacyCard.Section>
+                  </LegacyCard.Subsection>
                 </LegacyCard>
               </div>
             </LegacyCard>
@@ -164,10 +166,11 @@ export default function PageEdit() {
               ]}
             >
               <LegacyCard.Section>
-                <p>
-                  Add a title and description to see how this Page might appear
-                  in a search engine listing
+                
+                <p style={{ fontSize: "18px", color: "#1a0dab" }}>
+                  Check add page
                 </p>
+                
               </LegacyCard.Section>
               {editWithSeo && (
                 <LegacyCard.Section>

@@ -8,3 +8,4 @@ export { ModalConfirm } from "./ModalConfirm";
 export { EmptyStatePage } from "./EmptyState";
 export { DueDatePicker } from "./DueDatePicker";
 export { DueTimePicker } from "./DueTimePicker";
+export { SearchEngine } from "./SearchEngine";

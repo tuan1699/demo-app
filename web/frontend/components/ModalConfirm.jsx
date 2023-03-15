@@ -11,9 +11,8 @@ export function ModalConfirm({
 }) {
   const [loadingDelete, setLoadingDelete] = useState(false);
 
-  const countPagesSelected = selectedPages.length;
+  const countPagesSelected = selectedPages?.length;
   const fetch = useAuthenticatedFetch();
-
   const handleDeleteConfirm = async () => {
     setLoadingDelete(true);
     setIsLoading(true);

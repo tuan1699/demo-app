@@ -1,9 +1,13 @@
-import { useNavigate } from "@shopify/app-bridge-react";
+import { ContextualSaveBar, useNavigate } from "@shopify/app-bridge-react";
 import {
+  Banner,
   Button,
   ButtonGroup,
   ChoiceList,
+  Divider,
   Form,
+  Frame,
+  InlineError,
   Layout,
   LegacyCard,
   Page,
@@ -23,33 +27,27 @@ import {
   FaAlignRight,
   FaAlignLeft,
 } from "react-icons/fa";
-import { DueDatePicker, DueTimePicker } from "../components";
+import {
+  DueDatePicker,
+  DueTimePicker,
+  ModalConfirm,
+  SearchEngine,
+} from "../components";
 
 export default function CreatePage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [textValue, setTextValue] = useState("");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [theme, setTheme] = useState("today");
-  const handleEmailChange = useCallback((value) => setEmail(value), []);
-  const handleContentChange = useCallback((value) => setTextValue(value), []);
+  const handleTitleChange = useCallback((value) => {
+    setTitle(value);
+    setIsError(false);
+  }, []);
+  const handleContentChange = useCallback((value) => setContent(value), []);
   const [selected, setSelected] = useState(["Visible"]);
   const [isSetDate, setIsSetDate] = useState(false);
-  const [editWithSeo, setEditWithSeo] = useState(false);
-  const [titleSeo, setTitleSeo] = useState("");
-  const [descrSeo, setDecrSeo] = useState("");
-  const [urlSeo, setUrlSeo] = useState("");
-
-  const handleChangeTitleSeo = useCallback((value) => {
-    setTitleSeo(value);
-  }, []);
-
-  const handleChangeDecrSeo = useCallback((value) => {
-    setDecrSeo(value);
-  }, []);
-
-  const handleChangeUrlSeo = useCallback((value) => {
-    setUrlSeo(value);
-  });
+  const [isError, setIsError] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   const options = [
     { label: "Default", value: "today" },
@@ -65,30 +63,57 @@ export default function CreatePage() {
     }
   }, []);
 
+  const handleCreatePage = () => {
+    if (title.trim() === "") {
+      setIsError(true);
+    } else {
+      const newPage = {
+        title: title,
+        body_html: content,
+        published: true,
+      };
+      console.log(newPage);
+    }
+  };
+
   return (
     <Page
       backAction={{
-        onAction: () => navigate("/"),
+        onAction: () => {
+          navigate("/");
+          // setConfirmLeave(true);
+        },
       }}
       title="Add page"
     >
+      {isError && (
+        <div style={{ marginBottom: "16px" }}>
+          <Banner title="There is 1 error:" status="critical">
+            <li>Title can't be blank</li>
+          </Banner>
+        </div>
+      )}
+
       <Form>
         <Layout>
           <Layout.Section>
             <LegacyCard sectioned>
               <TextField
-                value={email}
-                onChange={handleEmailChange}
+                value={title}
+                onChange={handleTitleChange}
                 label="Title"
                 type="email"
                 autoComplete="email"
                 placeholder="e.g. Contact us, Sizing chart, FAQs"
+                error={isError ? "Store name is required" : null}
               />
               <div style={{ marginTop: "16px" }}>
                 <Text>Content</Text>
                 <LegacyCard>
-                  <LegacyCard.Section>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                  <LegacyCard>
+                    <div
+                      style={{ display: "flex", gap: "8px", padding: "8px" }}
+                    >
                       <ButtonGroup segmented>
                         <Button icon={TypeMinor} />
                         <Button icon={<FaBold />} />
@@ -107,65 +132,18 @@ export default function CreatePage() {
                         <Button icon={<FaAlignLeft />} />
                       </ButtonGroup>
                     </div>
-                  </LegacyCard.Section>
-                  <LegacyCard.Section>
+                  </LegacyCard>
+                  <LegacyCard.Subsection>
                     <TextField
-                      value={textValue}
+                      value={content}
+                      multiline={4}
                       onChange={handleContentChange}
                     ></TextField>
-                  </LegacyCard.Section>
+                  </LegacyCard.Subsection>
                 </LegacyCard>
               </div>
             </LegacyCard>
-            <LegacyCard
-              title="Search engine listing preview"
-              actions={[
-                {
-                  content: editWithSeo ? "" : "Edit website SEO",
-                  onAction: () => {
-                    setEditWithSeo(true);
-                  },
-                },
-              ]}
-            >
-              <LegacyCard.Section>
-                <p>
-                  Add a title and description to see how this Page might appear
-                  in a search engine listing
-                </p>
-              </LegacyCard.Section>
-              {editWithSeo && (
-                <LegacyCard.Section>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="Page title"
-                      type="text"
-                      value={titleSeo}
-                      onChange={handleChangeTitleSeo}
-                      helpText="0 of 70 characters used"
-                    />
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="Description"
-                      multiline={4}
-                      value={descrSeo}
-                      onChange={handleChangeDecrSeo}
-                      helpText="0 of 320 characters used"
-                    />
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="URL and handle"
-                      type="text"
-                      prefix="https://first-store-byt.myshopify.com/pages/"
-                      value={urlSeo}
-                      onChange={handleChangeUrlSeo}
-                    />
-                  </div>
-                </LegacyCard.Section>
-              )}
-            </LegacyCard>
+            <SearchEngine />
           </Layout.Section>
 
           <Layout.Section secondary>
@@ -227,6 +205,20 @@ export default function CreatePage() {
           </Layout.Section>
         </Layout>
       </Form>
+
+      <div style={{ margin: "20px 0px" }}>
+        <Divider borderStyle="divider" />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <ButtonGroup>
+          <Button onClick={() => console.log("Cancel")}>Cancel</Button>
+          <Button primary onClick={handleCreatePage}>
+            Save
+          </Button>
+        </ButtonGroup>
+      </div>
+
+      {confirmLeave && <ModalConfirm />}
     </Page>
   );
 }
