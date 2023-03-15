@@ -7,8 +7,10 @@ import serveStatic from "serve-static";
 import shopify from "./shopify.js";
 import productCreator from "./product-creator.js";
 import GDPRWebhookHandlers from "./gdpr.js";
+// @ts-ignore
 import { Session } from "inspector";
 
+// @ts-ignore
 const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT, 10);
 
 const STATIC_PATH =
@@ -27,6 +29,7 @@ app.get(
 );
 app.post(
   shopify.config.webhooks.path,
+  // @ts-ignore
   shopify.processWebhooks({ webhookHandlers: GDPRWebhookHandlers })
 );
 
@@ -58,11 +61,56 @@ app.get("/api/products/create", async (_req, res) => {
   res.status(status).send({ success: status === 200, error });
 });
 
+// GET ALL PAGE
 app.get("/api/pages", async (_req, res) => {
-  const pagesData = await shopify.api.rest.Page.all({
-    session: res.locals.shopify.session,
-    status: "hidden",
+  const id = _req.query.id;
+  const published_status = _req.query.published_status;
+  if (id) {
+    let pagesData = await shopify.api.rest.Page.find({
+      session: res.locals.shopify.session,
+      // @ts-ignore
+      id,
+    });
+    res.status(200).send(pagesData);
+  } else {
+    let pagesData = await shopify.api.rest.Page.all({
+      session: res.locals.shopify.session,
+      published_status: published_status,
+    });
+    res.status(200).send(pagesData);
+  }
+});
+
+// DELETE PAGE
+app.delete("/api/pages", async (_req, res) => {
+  // @ts-ignore
+  const ids = _req.query.id?.split(","); // Split comma-separated IDs into an array
+  const deletePromises = ids.map((id) =>
+    shopify.api.rest.Page.delete({
+      session: res.locals.shopify.session,
+      id: id,
+    })
+  );
+  const pagesData = await Promise.all(deletePromises);
+  res.status(200).send(pagesData);
+});
+
+// UPDATE PAGE: HIDDEN PAGE
+app.put("/api/pages", async (_req, res) => {
+  // @ts-ignore
+  const ids = _req.query.id?.split(",");
+  const published = _req.body.published;
+  const updatePromises = ids.map(async (id) => {
+    const page = new shopify.api.rest.Page({
+      session: res.locals.shopify.session,
+    });
+    page.id = id;
+    page.published = published;
+    await page.save({
+      update: true,
+    });
   });
+  const pagesData = await Promise.all(updatePromises);
   res.status(200).send(pagesData);
 });
 

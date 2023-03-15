@@ -1,5 +1,10 @@
+import { useParams } from "react-router-dom";
+import React, { useState, useCallback } from "react";
+import { useAppQuery } from "../hooks";
+
 import { useNavigate } from "@shopify/app-bridge-react";
 import {
+  Badge,
   Button,
   ButtonGroup,
   ChoiceList,
@@ -11,9 +16,8 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
-import { useCallback, useState } from "react";
 
-import { TypeMinor } from "@shopify/polaris-icons";
+import { TypeMinor, ViewMajor } from "@shopify/polaris-icons";
 import {
   FaBold,
   FaItalic,
@@ -24,8 +28,26 @@ import {
   FaAlignLeft,
 } from "react-icons/fa";
 import { DueDatePicker, DueTimePicker } from "../components";
+// import { DueDatePicker, DueTimePicker } from "../components";
 
-export default function CreatePage() {
+export default function PageEdit() {
+  const { id } = useParams();
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { data, error, refetch } = useAppQuery({
+    url: `/api/pages?id=${id}`,
+    reactQueryOptions: {
+      onSuccess: () => {
+        setIsLoading(false);
+      },
+      onError: (error) => {
+        console.log(error);
+      },
+    },
+  });
+
+  console.log(data);
+
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [textValue, setTextValue] = useState("");
@@ -70,7 +92,20 @@ export default function CreatePage() {
       backAction={{
         onAction: () => navigate("/"),
       }}
-      title="Add page"
+      title={data && data.title}
+      titleMetadata={data && data.published_at ? null : <Badge>Hidden</Badge>}
+      primaryAction={{ content: "Save", disabled: true, icon: ViewMajor }}
+      secondaryActions={[
+        {
+          content: "Duplicate",
+          accessibilityLabel: "Secondary action label",
+          onAction: () => alert("Duplicate action"),
+        },
+        {
+          content: "View on your store",
+          onAction: () => alert("View on your store action"),
+        },
+      ]}
     >
       <Form>
         <Layout>

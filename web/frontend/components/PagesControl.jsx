@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Button,
   LegacyCard,
   ChoiceList,
@@ -9,7 +8,6 @@ import {
   ResourceList,
   Tabs,
   Spinner,
-  Text,
 } from "@shopify/polaris";
 import React, { useCallback, useState } from "react";
 import {
@@ -17,15 +15,22 @@ import {
   SortMinor,
   StarOutlineMinor,
 } from "@shopify/polaris-icons";
-import { useAppQuery, useAuthenticatedFetch } from "../hooks";
-import { validDate } from "../ulities/validDate";
+import { useAppQuery } from "../hooks";
+import { TextFilter } from "./TextFilter";
+import { PageItem } from "./PageItem";
+import { ModalConfirm } from "./ModalConfirm";
+import { EmptyStatePage } from "./EmptyState";
+import { useAuthenticatedFetch } from "@shopify/app-bridge-react";
 
 export function PagesControl() {
-  const [selectedItems, setSelectedItems] = useState([]);
+  const fetch = useAuthenticatedFetch();
+  const [selectedPages, setSelectedPages] = useState([]);
   const [queryValue, setQueryValue] = useState("");
   const [visibleStatus, setVisibleStatus] = useState(null);
-  const [popoverActive, setPopoverActive] = useState(false);
+  const [popoverSortActive, setPopoverSortActive] = useState(false);
+  const [popoverSaveActive, setPopoverSaveActive] = useState(false);
   const [sortList, setSortList] = useState(null);
+
   const [tabList, setTabList] = useState([
     {
       id: "all-customers-1",
@@ -35,36 +40,84 @@ export function PagesControl() {
     },
   ]);
   const [tabSelected, setTabSelected] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [isLoadingState, setIsLoading] = useState(true);
 
-  const { data, isLoading, isError, error } = useAppQuery({
-    url: "/api/pages",
+  const [activeModal, setActiveModal] = useState(false);
+  const handleActiveModal = useCallback(() => {
+    setActiveModal(!activeModal);
+  }, [activeModal]);
+
+  const { data, isLoading, error, refetch } = useAppQuery({
+    url: `/api/pages?published_status=${visibleStatus}`,
     reactQueryOptions: {
       onSuccess: () => {
-        setLoading(false);
+        setIsLoading(false);
+        console.log("test loading");
+      },
+      onError: (error) => {
+        console.log(error);
       },
     },
   });
 
+  const handleHiddenPages = async (status) => {
+    const { published } = status;
+    console.log(published);
+    setIsLoading(true);
+    const res = await fetch(`/api/pages?id=${selectedPages.toString()}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        published: published,
+      }),
+    });
+
+    if (res.ok) {
+      setSelectedPages([]);
+      refetch();
+      console.log("OK");
+    } else {
+      console.log("NOT OK");
+    }
+  };
+
   const handleTabChange = useCallback((selectedTabIndex) => {
     if (selectedTabIndex === 0) {
       const newTabs = [...tabList];
-      newTabs.splice(1, 1);
+      newTabs.splice(1);
       setTabList(newTabs);
       setTabSelected(selectedTabIndex);
       handleRemoveVisibleStatus();
     }
   }, []);
 
-  const togglePopoverActive = useCallback(
-    () => setPopoverActive((popoverActive) => !popoverActive),
+  const togglePopoverSortActive = useCallback(
+    () => setPopoverSortActive((popoverSortActive) => !popoverSortActive),
+    []
+  );
+
+  const togglePopoverSaveActive = useCallback(
+    () => setPopoverSaveActive((popoverSaveActive) => !popoverSaveActive),
     []
   );
 
   // Sort Button
-  const activator = (
-    <Button icon={SortMinor} onClick={togglePopoverActive} disclosure>
+  const sortBtn = (
+    <Button icon={SortMinor} onClick={togglePopoverSortActive} disclosure>
       Sort
+    </Button>
+  );
+
+  const saveBtn = (
+    <Button
+      disabled={visibleStatus ? false : true}
+      icon={visibleStatus ? StarOutlineMinor : FavoriteMajor}
+      onClick={togglePopoverSaveActive}
+      disclosure
+    >
+      {visibleStatus ? "Save Filter" : "Saved"}
     </Button>
   );
 
@@ -116,11 +169,19 @@ export function PagesControl() {
   const bulkActions = [
     {
       content: "Make selected pages visible",
-      onAction: () => console.log("Todo: implement bulk add tags"),
+      onAction: () => {
+        handleHiddenPages({
+          published: true,
+        });
+      },
     },
     {
       content: "Hide selected pages",
-      onAction: () => console.log("Todo: implement bulk remove tags"),
+      onAction: () => {
+        handleHiddenPages({
+          published: false,
+        });
+      },
     },
     {
       content: (
@@ -128,7 +189,7 @@ export function PagesControl() {
           Delete Pages
         </Button>
       ),
-      onAction: () => console.log("Todo: implement bulk delete"),
+      onAction: () => setActiveModal(!activeModal),
     },
   ];
 
@@ -141,8 +202,8 @@ export function PagesControl() {
           title="Visible status"
           titleHidden
           choices={[
-            { label: "Visible", value: "Visible" },
-            { label: "Hidden", value: "Hidden" },
+            { label: "Visible", value: "published" },
+            { label: "Hidden", value: "unpublished" },
           ]}
           selected={visibleStatus || []}
           onChange={handleVisibleStatusChange}
@@ -172,18 +233,27 @@ export function PagesControl() {
       onClearAll={handleClearAll}
     >
       <div style={{ paddingLeft: "8px", display: "flex", gap: "8px" }}>
-        <Button
-          disabled={visibleStatus ? false : true}
-          icon={visibleStatus ? StarOutlineMinor : FavoriteMajor}
-          onClick={() => console.log("New filter saved")}
-        >
-          {visibleStatus ? "Save Filter" : "Saved"}
-        </Button>
         <Popover
-          active={popoverActive}
-          activator={activator}
+          active={popoverSaveActive}
+          activator={saveBtn}
           autofocusTarget="first-node"
-          onClose={togglePopoverActive}
+          onClose={togglePopoverSaveActive}
+          preferredAlignment="right"
+        >
+          <Popover.Pane>
+            <div style={{ padding: "16px", width: "380px", height: "auto" }}>
+              <TextFilter
+                tagname={visibleStatus}
+                togglePopoverSaveActive={togglePopoverSaveActive}
+              />
+            </div>
+          </Popover.Pane>
+        </Popover>
+        <Popover
+          active={popoverSortActive}
+          activator={sortBtn}
+          autofocusTarget="first-node"
+          onClose={togglePopoverSortActive}
           preferredAlignment="right"
         >
           <Popover.Pane>
@@ -208,53 +278,78 @@ export function PagesControl() {
   );
 
   return (
-    <LegacyCard>
-      <Tabs tabs={tabList} selected={tabSelected} onSelect={handleTabChange}>
-        <LegacyCard>
-          {data?.length === 0 || data === undefined || isLoading ? (
-            <div
-              style={{
-                width: "100%",
-                margin: "30px auto",
-                textAlign: "center",
-              }}
+    <>
+      <LegacyCard>
+        {data === undefined ? (
+          <div
+            style={{
+              width: "100%",
+              margin: "30px auto",
+              textAlign: "center",
+            }}
+          >
+            <Spinner accessibilityLabel="Spinner example" size="large" />
+          </div>
+        ) : data && data?.length === 0 && !visibleStatus ? (
+          <EmptyStatePage />
+        ) : (
+          <>
+            <Tabs
+              tabs={tabList}
+              selected={tabSelected}
+              onSelect={handleTabChange}
             >
-              <Spinner accessibilityLabel="Spinner example" size="large" />
-            </div>
-          ) : (
-            <ResourceList
-              resourceName={resourceName}
-              items={data}
-              renderItem={renderItem}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-              bulkActions={bulkActions}
-              filterControl={filterControl}
-            />
-          )}
-        </LegacyCard>
-      </Tabs>
-    </LegacyCard>
+              <LegacyCard>
+                <ResourceList
+                  resourceName={resourceName}
+                  items={data}
+                  renderItem={renderItem}
+                  selectedItems={selectedPages}
+                  onSelectionChange={setSelectedPages}
+                  bulkActions={bulkActions}
+                  filterControl={filterControl}
+                  loading={isLoadingState ? true : false}
+                />
+                {activeModal && (
+                  <ModalConfirm
+                    selectedPages={selectedPages}
+                    handleActiveModal={handleActiveModal}
+                    setIsLoading={setIsLoading}
+                    refetch={refetch}
+                    setSelectedPages={setSelectedPages}
+                  />
+                )}
+              </LegacyCard>
+            </Tabs>
+          </>
+        )}
+      </LegacyCard>
+    </>
   );
 
   function renderItem(item) {
-    const { id, title, created_at, body_html, admin_graphql_api_id } = item;
+    const {
+      id,
+      title,
+      created_at,
+      body_html,
+      admin_graphql_api_id,
+      published_at,
+    } = item;
     const shortcutActions = admin_graphql_api_id
       ? [{ content: "View Page", url: admin_graphql_api_id }]
       : null;
     return (
-      <ResourceItem id={id} shortcutActions={shortcutActions}>
-        <Text as="h3" variant="bodyMd" fontWeight="semibold">
-          {title}
-        </Text>
-        {body_html && (
-          <Text as="p" variant="bodyMd" color="subdued" fontWeight="regular">
-            {body_html}
-          </Text>
-        )}
-        <Text as="p" variant="bodyMd" color="subdued" fontWeight="regular">
-          {validDate(created_at)}
-        </Text>
+      <ResourceItem id={id} shortcutActions={shortcutActions} url={`/${id}`}>
+        <PageItem
+          id={id}
+          shortcutActions={shortcutActions}
+          body_html={body_html}
+          created_at={created_at}
+          visibleStatus={visibleStatus}
+          title={title}
+          published_at={published_at}
+        />
       </ResourceItem>
     );
   }
