@@ -81,6 +81,19 @@ app.get("/api/pages", async (_req, res) => {
   }
 });
 
+// CREATE PAGE
+app.post("/api/pages", async (_req, res) => {
+  const data = _req.body.page;
+  const pagesData = new shopify.api.rest.Page({
+    session: res.locals.shopify.session,
+  });
+  pagesData.title = data?.title;
+  pagesData.body_html = data?.body_html || "";
+  pagesData.published = data?.published;
+  await pagesData.save({ update: true });
+  res.status(200).send(pagesData);
+});
+
 // DELETE PAGE
 app.delete("/api/pages", async (_req, res) => {
   // @ts-ignore
@@ -100,19 +113,74 @@ app.put("/api/pages", async (_req, res) => {
   // @ts-ignore
   const ids = _req.query.id?.split(",");
   const published = _req.body.published;
-  const updatePromises = ids.map(async (id) => {
+  const title = _req.body.title;
+  const body_html = _req.body.body_html;
+
+  if (title || body_html) {
     const page = new shopify.api.rest.Page({
       session: res.locals.shopify.session,
     });
-    page.id = id;
+    page.id = ids[0];
+    page.title = title;
     page.published = published;
+    page.body_html = body_html;
     await page.save({
       update: true,
     });
-  });
-  const pagesData = await Promise.all(updatePromises);
-  res.status(200).send(pagesData);
+    res.status(200).send(page);
+  } else if (ids) {
+    const updatePageStatus = ids.map(async (id) => {
+      const page = new shopify.api.rest.Page({
+        session: res.locals.shopify.session,
+      });
+      page.id = id;
+      page.published = published;
+      await page.save({
+        update: true,
+      });
+    });
+    const pagesData = await Promise.all(updatePageStatus);
+    res.status(200).send(pagesData);
+  }
 });
+
+// app.put("/api/pages", async (_req, res) => {
+//   const ids = _req.query.id.split(",");
+//   const published_status = _req.body.page.published;
+//   const title = _req.body.page.title;
+//   const body_html = _req.body.page.body_html;
+
+//   if (title) {
+//     // update content of a page
+//     const page = new shopify.api.rest.Page({
+//       session: res.locals.shopify.session,
+//     });
+//     page.id = ids[0];
+//     page.published = published_status;
+//     page.title = title;
+//     page.body_html = body_html;
+//     await page.save({
+//       update: true,
+//     });
+//     res.status(200).send(page);
+//   } else {
+//     // update status of a page or many pages
+//     const updatePageStatus = ids.map(async (id) => {
+//       const page = new shopify.api.rest.Page({
+//         session: res.locals.shopify.session,
+//       });
+//       page.id = id;
+//       page.published = published_status;
+//       page.title = title;
+//       page.body_html = body_html;
+//       await page.save({
+//         update: true,
+//       });
+//     });
+//     const pagesData = await Promise.all(updatePageStatus);
+//     res.status(200).send(pagesData);
+//   }
+// });
 
 app.use(serveStatic(STATIC_PATH, { index: false }));
 

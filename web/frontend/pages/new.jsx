@@ -1,4 +1,4 @@
-import { ContextualSaveBar, useNavigate } from "@shopify/app-bridge-react";
+import { useAuthenticatedFetch, useNavigate } from "@shopify/app-bridge-react";
 import {
   Banner,
   Button,
@@ -6,8 +6,6 @@ import {
   ChoiceList,
   Divider,
   Form,
-  Frame,
-  InlineError,
   Layout,
   LegacyCard,
   Page,
@@ -35,6 +33,7 @@ import {
 } from "../components";
 
 export default function CreatePage() {
+  const fetch = useAuthenticatedFetch();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -44,10 +43,11 @@ export default function CreatePage() {
     setIsError(false);
   }, []);
   const handleContentChange = useCallback((value) => setContent(value), []);
-  const [selected, setSelected] = useState(["Visible"]);
+  const [visibleStatus, setVisibleStatus] = useState(["Visible"]);
   const [isSetDate, setIsSetDate] = useState(false);
   const [isError, setIsError] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const options = [
     { label: "Default", value: "today" },
@@ -57,7 +57,7 @@ export default function CreatePage() {
 
   const handleChange = useCallback((value) => {
     console.log(value);
-    setSelected(value);
+    setVisibleStatus(value);
     if (value.toString() === "Visible") {
       setIsSetDate(false);
     }
@@ -67,12 +67,35 @@ export default function CreatePage() {
     if (title.trim() === "") {
       setIsError(true);
     } else {
+      // const publishedDate = new Date().toLocaleDateString();
+      setLoading(true);
       const newPage = {
         title: title,
         body_html: content,
-        published: true,
+        // published:
+        //   visibleStatus?.toString() !== "Visible" ? null : publishedDate,
       };
       console.log(newPage);
+      fetch("/api/pages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          page: newPage,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setLoading(false);
+          console.log("OKE");
+          console.log(data);
+          navigate(`/${data.id}`);
+        })
+        .catch((err) => {
+          console.log("NOT OK");
+          console.log(err);
+        });
     }
   };
 
@@ -143,7 +166,7 @@ export default function CreatePage() {
                 </LegacyCard>
               </div>
             </LegacyCard>
-            <SearchEngine />
+            <SearchEngine title={title} content={content} />
           </Layout.Section>
 
           <Layout.Section secondary>
@@ -152,14 +175,14 @@ export default function CreatePage() {
                 choices={[
                   {
                     label:
-                      selected?.toString() === `Visible`
+                      visibleStatus?.toString() === `Visible`
                         ? `Visible (as of ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()})`
                         : `Visible`,
                     value: "Visible",
                   },
                   { label: "Hidden", value: "Hidden" },
                 ]}
-                selected={selected}
+                selected={visibleStatus}
                 onChange={handleChange}
               />
               {isSetDate ? (
@@ -180,7 +203,7 @@ export default function CreatePage() {
                   plain
                   onClick={() => {
                     setIsSetDate(!isSetDate);
-                    setSelected(["Hidden"]);
+                    setVisibleStatus(["Hidden"]);
                   }}
                 >
                   {isSetDate ? "Clear date..." : "Set visibility date"}
@@ -212,7 +235,14 @@ export default function CreatePage() {
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <ButtonGroup>
           <Button onClick={() => console.log("Cancel")}>Cancel</Button>
-          <Button primary onClick={handleCreatePage}>
+          <Button
+            primary
+            onClick={handleCreatePage}
+            disabled={
+              title.trim() !== "" || content.trim() !== "" ? false : true
+            }
+            loading={loading}
+          >
             Save
           </Button>
         </ButtonGroup>

@@ -1,11 +1,18 @@
 import { LegacyCard, Text, TextField } from "@shopify/polaris";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
-export function SearchEngine() {
+export function SearchEngine({ title, content }) {
   const [editWithSeo, setEditWithSeo] = useState(false);
-  const [titleSeo, setTitleSeo] = useState("");
-  const [descrSeo, setDecrSeo] = useState("");
+  const [titleSeo, setTitleSeo] = useState(title);
+  const [titleSeoDefault, setTitleSeoDefault] = useState(title);
+  const [descrSeo, setDecrSeo] = useState(content);
+  const [descrSeoDefault, setDecrDefault] = useState(content);
   const [urlSeo, setUrlSeo] = useState("");
+
+  useEffect(() => {
+    setTitleSeoDefault(title);
+    setDecrDefault(content);
+  }, [title, content]);
 
   const handleChangeTitleSeo = useCallback((value) => {
     setTitleSeo(value);
@@ -40,12 +47,33 @@ export function SearchEngine() {
             >{`https://first-store-byt.myshopify.com/pages/${urlSeo}`}</Text>
             <p style={{ fontSize: "13px" }}>{descrSeo}</p>
           </div>
+        ) : titleSeo.trim() === "" &&
+          descrSeo.trim() === "" &&
+          title.trim() !== "" &&
+          content.trim() !== "" ? (
+          <div>
+            <p style={{ fontSize: "18px", color: "#1a0dab" }}>{title}</p>
+            <Text
+              color="success"
+              as="h6"
+            >{`https://first-store-byt.myshopify.com/pages/${urlSeo}`}</Text>
+            <p style={{ fontSize: "13px" }}>{content}</p>
+          </div>
         ) : (
           <p>
-            {` Add ${titleSeo.trim() !== "" ? "" : "a title"} ${
-              titleSeo.trim() === "" && descrSeo.trim() === "" ? "and" : ""
+            {` Add ${
+              titleSeo.trim() !== "" || title.trim() !== "" ? "" : "a title"
+            } ${
+              titleSeo.trim() === "" &&
+              descrSeo.trim() === "" &&
+              title.trim() === "" &&
+              content.trim() === ""
+                ? "and"
+                : ""
             }  ${
-              descrSeo.trim() !== "" ? "" : "description"
+              descrSeo.trim() !== "" || content.trim() !== ""
+                ? ""
+                : "description"
             } to see how this Page might appear in a
             search engine listing`}
           </p>
@@ -58,6 +86,7 @@ export function SearchEngine() {
               label="Page title"
               type="text"
               value={titleSeo}
+              placeholder={titleSeoDefault}
               onChange={handleChangeTitleSeo}
               helpText={`${titleSeo.length} of 70 characters used`}
             />
@@ -67,6 +96,7 @@ export function SearchEngine() {
               label="Description"
               multiline={4}
               value={descrSeo}
+              placeholder={descrSeoDefault}
               onChange={handleChangeDecrSeo}
               helpText={`${descrSeo.length} of 320 characters used`}
             />

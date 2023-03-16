@@ -18,9 +18,9 @@ import {
 import { useAppQuery } from "../hooks";
 import { TextFilter } from "./TextFilter";
 import { PageItem } from "./PageItem";
-import { ModalConfirm } from "./ModalConfirm";
 import { EmptyStatePage } from "./EmptyState";
 import { useAuthenticatedFetch } from "@shopify/app-bridge-react";
+import { ModalComp } from "./ModalComp";
 
 export function PagesControl() {
   const fetch = useAuthenticatedFetch();
@@ -30,6 +30,12 @@ export function PagesControl() {
   const [popoverSortActive, setPopoverSortActive] = useState(false);
   const [popoverSaveActive, setPopoverSaveActive] = useState(false);
   const [sortList, setSortList] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    subTitle: "",
+    contentAction: "",
+  });
 
   const [tabList, setTabList] = useState([
     {
@@ -42,12 +48,7 @@ export function PagesControl() {
   const [tabSelected, setTabSelected] = useState(0);
   const [isLoadingState, setIsLoading] = useState(true);
 
-  const [activeModal, setActiveModal] = useState(false);
-  const handleActiveModal = useCallback(() => {
-    setActiveModal(!activeModal);
-  }, [activeModal]);
-
-  const { data, isLoading, error, refetch } = useAppQuery({
+  const { data, refetch } = useAppQuery({
     url: `/api/pages?published_status=${visibleStatus}`,
     reactQueryOptions: {
       onSuccess: () => {
@@ -161,6 +162,25 @@ export function PagesControl() {
     handleQueryValueRemove();
   }, [handleRemoveVisibleStatus]);
 
+  const handleDeletePage = async () => {
+    console.log("Delete Page");
+    const res = await fetch(`/api/pages?id=${selectedPages.toString()}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      refetch();
+      console.log("OK");
+      setConfirmModal({
+        ...confirmModal,
+        isOpen: false,
+      });
+      setSelectedPages([]);
+    } else {
+      console.log("NOT OK");
+    }
+  };
+
   const resourceName = {
     singular: "page",
     plural: "pages",
@@ -189,7 +209,20 @@ export function PagesControl() {
           Delete Pages
         </Button>
       ),
-      onAction: () => setActiveModal(!activeModal),
+      onAction: () =>
+        setConfirmModal({
+          ...confirmModal,
+          isOpen: true,
+          title: `Delete ${selectedPages?.length} ${
+            selectedPages?.length === 1 ? "page" : "pages"
+          }`,
+          subTitle:
+            "Deleted pages cannot be recovered. Do you still want to continue?",
+          contentAction: `Delete ${selectedPages?.length} ${
+            selectedPages?.length === 1 ? "page" : "pages"
+          }`,
+          onConfirm: () => handleDeletePage(),
+        }),
     },
   ];
 
@@ -310,13 +343,10 @@ export function PagesControl() {
                   filterControl={filterControl}
                   loading={isLoadingState ? true : false}
                 />
-                {activeModal && (
-                  <ModalConfirm
-                    selectedPages={selectedPages}
-                    handleActiveModal={handleActiveModal}
-                    setIsLoading={setIsLoading}
-                    refetch={refetch}
-                    setSelectedPages={setSelectedPages}
+                {confirmModal.isOpen && (
+                  <ModalComp
+                    confirmModal={confirmModal}
+                    setConfirmModal={setConfirmModal}
                   />
                 )}
               </LegacyCard>

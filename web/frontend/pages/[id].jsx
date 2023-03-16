@@ -2,18 +2,23 @@ import { useParams } from "react-router-dom";
 import React, { useState, useCallback, useEffect } from "react";
 import { useAppQuery } from "../hooks";
 
-import { useNavigate } from "@shopify/app-bridge-react";
+import { useAuthenticatedFetch, useNavigate } from "@shopify/app-bridge-react";
 import {
   Badge,
   Button,
   ButtonGroup,
   ChoiceList,
+  Divider,
   Form,
   Layout,
   LegacyCard,
   Page,
   Select,
+  SkeletonBodyText,
+  SkeletonDisplayText,
+  SkeletonPage,
   Text,
+  TextContainer,
   TextField,
 } from "@shopify/polaris";
 
@@ -27,33 +32,42 @@ import {
   FaAlignRight,
   FaAlignLeft,
 } from "react-icons/fa";
-import { DueDatePicker, DueTimePicker } from "../components";
-// import { DueDatePicker, DueTimePicker } from "../components";
+import {
+  DueDatePicker,
+  DueTimePicker,
+  ModalComp,
+  SearchEngine,
+} from "../components";
 
 export default function PageEdit() {
+  const fetch = useAuthenticatedFetch();
+
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {});
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    subTitle: "",
+    contentAction: "",
+  });
 
   const navigate = useNavigate();
+  const [initData, setInitData] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [theme, setTheme] = useState("today");
   const handleTitleChange = useCallback((value) => setTitle(value), []);
   const handleContentChange = useCallback((value) => setContent(value), []);
-  const [selected, setSelected] = useState(["Visible"]);
+  const [visibleStatus, setVisibleStatus] = useState(["Visible"]);
   const [isSetDate, setIsSetDate] = useState(false);
-  const [editWithSeo, setEditWithSeo] = useState(false);
-  const [titleSeo, setTitleSeo] = useState("");
-  const [descrSeo, setDecrSeo] = useState("");
-  const [urlSeo, setUrlSeo] = useState("");
 
-  const { data, error, refetch } = useAppQuery({
+  const { data, refetch } = useAppQuery({
     url: `/api/pages?id=${id}`,
     reactQueryOptions: {
       onSuccess: (data) => {
         console.log(data);
+        setInitData(data);
         setTitle(data.title);
         setContent(data.body_html);
         setIsLoading(false);
@@ -64,36 +78,136 @@ export default function PageEdit() {
     },
   });
 
-  const handleChangeTitleSeo = useCallback((value) => {
-    setTitleSeo(value);
-  }, []);
-
-  const handleChangeDecrSeo = useCallback((value) => {
-    setDecrSeo(value);
-  }, []);
-
-  const handleChangeUrlSeo = useCallback((value) => {
-    setUrlSeo(value);
-  });
-
   const options = [
     { label: "Default", value: "today" },
     { label: "contact", value: "contact" },
   ];
+
   const handleThemeChange = useCallback((value) => setTheme(value), []);
 
   const handleChange = useCallback((value) => {
     console.log(value);
-    setSelected(value);
+    setVisibleStatus(value);
     if (value.toString() === "Visible") {
       setIsSetDate(false);
     }
   }, []);
 
+  const handleUpdatePage = () => {
+    const updatedData = {
+      title: title,
+      body_html: content,
+      published: visibleStatus?.toString() !== "Visible" ? false : true,
+    };
+    setLoadingUpdate(true);
+    console.log(updatedData);
+    fetch(`/api/pages?id=${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedData),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("OK");
+        refetch();
+        console.log(data);
+        setLoadingUpdate(false);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
+  const handleDeletePage = async () => {
+    const res = await fetch(`/api/pages?id=${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      console.log("OK");
+      navigate("/");
+      setConfirmModal({
+        ...confirmModal,
+        loading: false,
+      });
+    } else {
+      console.log("NOT OK");
+    }
+  };
+
+  if (isLoading)
+    return (
+      <SkeletonPage primaryAction>
+        <Layout>
+          <Layout.Section>
+            <LegacyCard sectioned>
+              <SkeletonBodyText />
+            </LegacyCard>
+            <LegacyCard sectioned>
+              <TextContainer>
+                <SkeletonDisplayText size="small" />
+                <SkeletonBodyText />
+              </TextContainer>
+            </LegacyCard>
+            <LegacyCard sectioned>
+              <TextContainer>
+                <SkeletonDisplayText size="small" />
+                <SkeletonBodyText />
+              </TextContainer>
+            </LegacyCard>
+          </Layout.Section>
+          <Layout.Section secondary>
+            <LegacyCard>
+              <LegacyCard.Section>
+                <TextContainer>
+                  <SkeletonDisplayText size="small" />
+                  <SkeletonBodyText lines={2} />
+                </TextContainer>
+              </LegacyCard.Section>
+              <LegacyCard.Section>
+                <SkeletonBodyText lines={1} />
+              </LegacyCard.Section>
+            </LegacyCard>
+            <LegacyCard subdued>
+              <LegacyCard.Section>
+                <TextContainer>
+                  <SkeletonDisplayText size="small" />
+                  <SkeletonBodyText lines={2} />
+                </TextContainer>
+              </LegacyCard.Section>
+              <LegacyCard.Section>
+                <SkeletonBodyText lines={2} />
+              </LegacyCard.Section>
+            </LegacyCard>
+          </Layout.Section>
+        </Layout>
+      </SkeletonPage>
+    );
+
   return (
     <Page
       backAction={{
-        onAction: () => navigate("/"),
+        onAction: () => {
+          console.log("check");
+          if (
+            title.trim() !== initData.title ||
+            content.trim() !== initData.body_html
+          ) {
+            setConfirmModal({
+              ...confirmModal,
+              isOpen: true,
+              title: "You have unsaved changes",
+              subTitle:
+                "If you leave this page, all unsaved changes will be lost.",
+              contentAction: "Leave page",
+              onConfirm: () => navigate("/"),
+            });
+          } else {
+            navigate("/");
+          }
+        },
       }}
       title={data && data.title}
       titleMetadata={data && data.published_at ? null : <Badge>Hidden</Badge>}
@@ -154,56 +268,7 @@ export default function PageEdit() {
                 </LegacyCard>
               </div>
             </LegacyCard>
-            <LegacyCard
-              title="Search engine listing preview"
-              actions={[
-                {
-                  content: editWithSeo ? "" : "Edit website SEO",
-                  onAction: () => {
-                    setEditWithSeo(true);
-                  },
-                },
-              ]}
-            >
-              <LegacyCard.Section>
-                
-                <p style={{ fontSize: "18px", color: "#1a0dab" }}>
-                  Check add page
-                </p>
-                
-              </LegacyCard.Section>
-              {editWithSeo && (
-                <LegacyCard.Section>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="Page title"
-                      type="text"
-                      value={titleSeo}
-                      onChange={handleChangeTitleSeo}
-                      helpText="0 of 70 characters used"
-                    />
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="Description"
-                      multiline={4}
-                      value={descrSeo}
-                      onChange={handleChangeDecrSeo}
-                      helpText="0 of 320 characters used"
-                    />
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <TextField
-                      label="URL and handle"
-                      type="text"
-                      prefix="https://first-store-byt.myshopify.com/pages/"
-                      value={urlSeo}
-                      onChange={handleChangeUrlSeo}
-                    />
-                  </div>
-                </LegacyCard.Section>
-              )}
-            </LegacyCard>
+            <SearchEngine title={title} content={content} />
           </Layout.Section>
 
           <Layout.Section secondary>
@@ -212,14 +277,14 @@ export default function PageEdit() {
                 choices={[
                   {
                     label:
-                      selected?.toString() === `Visible`
+                      visibleStatus?.toString() === `Visible`
                         ? `Visible (as of ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()})`
                         : `Visible`,
                     value: "Visible",
                   },
                   { label: "Hidden", value: "Hidden" },
                 ]}
-                selected={selected}
+                selected={visibleStatus}
                 onChange={handleChange}
               />
               {isSetDate ? (
@@ -240,7 +305,7 @@ export default function PageEdit() {
                   plain
                   onClick={() => {
                     setIsSetDate(!isSetDate);
-                    setSelected(["Hidden"]);
+                    setVisibleStatus(["Hidden"]);
                   }}
                 >
                   {isSetDate ? "Clear date..." : "Set visibility date"}
@@ -265,6 +330,50 @@ export default function PageEdit() {
           </Layout.Section>
         </Layout>
       </Form>
+
+      <div style={{ margin: "20px 0px" }}>
+        <Divider borderStyle="divider" />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <ButtonGroup>
+          <Button
+            onClick={() =>
+              setConfirmModal({
+                ...confirmModal,
+                isOpen: true,
+                title: `Delete ${title}`,
+                subTitle: `Delete "${title}"? This
+                can't be undone.`,
+                contentAction: "Delete",
+                onConfirm: () => handleDeletePage(),
+              })
+            }
+            outline
+            destructive
+          >
+            Delete page
+          </Button>
+          <Button
+            primary
+            disabled={
+              title.trim() !== initData.title ||
+              content.trim() !== initData.body_html
+                ? false
+                : true
+            }
+            onClick={handleUpdatePage}
+            loading={loadingUpdate}
+          >
+            Save
+          </Button>
+        </ButtonGroup>
+      </div>
+      {confirmModal.isOpen && (
+        <ModalComp
+          confirmModal={confirmModal}
+          setConfirmModal={setConfirmModal}
+        />
+      )}
     </Page>
   );
 }
