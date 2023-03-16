@@ -15,21 +15,13 @@ import {
 } from "@shopify/polaris";
 import { useCallback, useState } from "react";
 
-import { TypeMinor } from "@shopify/polaris-icons";
 import {
-  FaBold,
-  FaItalic,
-  FaUnderline,
-  FaListUl,
-  FaListOl,
-  FaAlignRight,
-  FaAlignLeft,
-} from "react-icons/fa";
-import {
+  ContentFormater,
   DueDatePicker,
   DueTimePicker,
-  ModalConfirm,
+  ModalComp,
   SearchEngine,
+  ToastMessage,
 } from "../components";
 
 export default function CreatePage() {
@@ -46,8 +38,17 @@ export default function CreatePage() {
   const [visibleStatus, setVisibleStatus] = useState(["Visible"]);
   const [isSetDate, setIsSetDate] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [confirmLeave, setConfirmLeave] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    subTitle: "",
+    contentAction: "",
+  });
+  const [toast, setToast] = useState({
+    isOpen: false,
+    message: "",
+  });
 
   const options = [
     { label: "Default", value: "today" },
@@ -85,12 +86,21 @@ export default function CreatePage() {
           page: newPage,
         }),
       })
-        .then((res) => res.json())
+        .then((res) => {
+          return res.json();
+        })
         .then((data) => {
           setLoading(false);
           console.log("OKE");
           console.log(data);
-          navigate(`/${data.id}`);
+          setToast({
+            ...toast,
+            isOpen: true,
+            message: "Page was created",
+          });
+          setTimeout(() => {
+            navigate(`/${data.id}`);
+          }, 1000);
         })
         .catch((err) => {
           console.log("NOT OK");
@@ -103,8 +113,19 @@ export default function CreatePage() {
     <Page
       backAction={{
         onAction: () => {
-          navigate("/");
-          // setConfirmLeave(true);
+          if (title.trim() !== "" || content.trim() !== "") {
+            setConfirmModal({
+              ...confirmModal,
+              isOpen: true,
+              title: "You have unsaved changes",
+              subTitle:
+                "If you leave this page, all unsaved changes will be lost.",
+              contentAction: "Leave page",
+              onConfirm: () => navigate("/"),
+            });
+          } else {
+            navigate("/");
+          }
         },
       }}
       title="Add page"
@@ -130,7 +151,11 @@ export default function CreatePage() {
                 placeholder="e.g. Contact us, Sizing chart, FAQs"
                 error={isError ? "Store name is required" : null}
               />
-              <div style={{ marginTop: "16px" }}>
+              <ContentFormater
+                content={content}
+                handleContentChange={handleContentChange}
+              />
+              {/* <div style={{ marginTop: "16px" }}>
                 <Text>Content</Text>
                 <LegacyCard>
                   <LegacyCard>
@@ -164,7 +189,7 @@ export default function CreatePage() {
                     ></TextField>
                   </LegacyCard.Subsection>
                 </LegacyCard>
-              </div>
+              </div> */}
             </LegacyCard>
             <SearchEngine title={title} content={content} />
           </Layout.Section>
@@ -247,8 +272,13 @@ export default function CreatePage() {
           </Button>
         </ButtonGroup>
       </div>
-
-      {confirmLeave && <ModalConfirm />}
+      {confirmModal.isOpen && (
+        <ModalComp
+          confirmModal={confirmModal}
+          setConfirmModal={setConfirmModal}
+        />
+      )}
+      {toast.isOpen && <ToastMessage toast={toast} setToast={setToast} />}
     </Page>
   );
 }

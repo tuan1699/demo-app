@@ -37,6 +37,7 @@ import {
   DueTimePicker,
   ModalComp,
   SearchEngine,
+  ToastMessage,
 } from "../components";
 
 export default function PageEdit() {
@@ -61,6 +62,10 @@ export default function PageEdit() {
   const handleContentChange = useCallback((value) => setContent(value), []);
   const [visibleStatus, setVisibleStatus] = useState(["Visible"]);
   const [isSetDate, setIsSetDate] = useState(false);
+  const [toast, setToast] = useState({
+    isOpen: false,
+    message: "",
+  });
 
   const { data, refetch } = useAppQuery({
     url: `/api/pages?id=${id}`,
@@ -114,6 +119,11 @@ export default function PageEdit() {
         refetch();
         console.log(data);
         setLoadingUpdate(false);
+        setToast({
+          ...toast,
+          isOpen: true,
+          message: "Page was saved",
+        });
       })
       .catch((err) => {
         console.log(err);
@@ -127,11 +137,18 @@ export default function PageEdit() {
 
     if (res.ok) {
       console.log("OK");
-      navigate("/");
       setConfirmModal({
         ...confirmModal,
         loading: false,
       });
+      setToast({
+        ...toast,
+        isOpen: true,
+        message: "Deleted 1 page",
+      });
+      setTimeout(() => {
+        navigate("/");
+      }, 500);
     } else {
       console.log("NOT OK");
     }
@@ -213,7 +230,14 @@ export default function PageEdit() {
       titleMetadata={data && data.published_at ? null : <Badge>Hidden</Badge>}
       secondaryActions={[
         { content: "Duplicate", icon: DuplicateMinor },
-        { content: "Preview page", icon: ViewMajor },
+        {
+          content: "Preview page",
+          icon: ViewMajor,
+          onAction: () =>
+            navigate(
+              `https://first-store-byt.myshopify.com/pages/${initData.handle}`
+            ),
+        },
       ]}
       pagination={{
         hasPrevious: true,
@@ -374,6 +398,7 @@ export default function PageEdit() {
           setConfirmModal={setConfirmModal}
         />
       )}
+      {toast.isOpen && <ToastMessage toast={toast} setToast={setToast} />}
     </Page>
   );
 }

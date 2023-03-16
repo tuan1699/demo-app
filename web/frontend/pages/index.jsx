@@ -7,6 +7,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   return (
     <Page
+      fullWidth
       title="Pages"
       primaryAction={{
         content: "Add Page",

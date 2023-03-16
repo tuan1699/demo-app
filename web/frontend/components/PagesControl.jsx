@@ -8,8 +8,10 @@ import {
   ResourceList,
   Tabs,
   Spinner,
+  Toast,
+  Frame,
 } from "@shopify/polaris";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   FavoriteMajor,
   SortMinor,
@@ -21,15 +23,21 @@ import { PageItem } from "./PageItem";
 import { EmptyStatePage } from "./EmptyState";
 import { useAuthenticatedFetch } from "@shopify/app-bridge-react";
 import { ModalComp } from "./ModalComp";
+import { ToastMessage } from "./ToastMessage";
 
 export function PagesControl() {
   const fetch = useAuthenticatedFetch();
+  const [dataPages, setDataPages] = useState(null);
   const [selectedPages, setSelectedPages] = useState([]);
   const [queryValue, setQueryValue] = useState("");
   const [visibleStatus, setVisibleStatus] = useState(null);
   const [popoverSortActive, setPopoverSortActive] = useState(false);
   const [popoverSaveActive, setPopoverSaveActive] = useState(false);
   const [sortList, setSortList] = useState(null);
+  const [toast, setToast] = useState({
+    isOpen: false,
+    message: "",
+  });
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: "",
@@ -51,8 +59,10 @@ export function PagesControl() {
   const { data, refetch } = useAppQuery({
     url: `/api/pages?published_status=${visibleStatus}`,
     reactQueryOptions: {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setIsLoading(false);
+        setDataPages(data);
+        console.log(data);
         console.log("test loading");
       },
       onError: (error) => {
@@ -60,6 +70,10 @@ export function PagesControl() {
       },
     },
   });
+
+  useEffect(() => {
+    console.log("test");
+  }, []);
 
   const handleHiddenPages = async (status) => {
     const { published } = status;
@@ -79,6 +93,13 @@ export function PagesControl() {
       setSelectedPages([]);
       refetch();
       console.log("OK");
+      setToast({
+        ...toast,
+        isOpen: true,
+        message: ` ${published ? "Visible" : "Hidden"} ${
+          selectedPages.length
+        } ${selectedPages.length === 1 ? "page" : "pages"}`,
+      });
     } else {
       console.log("NOT OK");
     }
@@ -174,6 +195,13 @@ export function PagesControl() {
       setConfirmModal({
         ...confirmModal,
         isOpen: false,
+      });
+      setToast({
+        ...toast,
+        isOpen: true,
+        message: `Deleted ${selectedPages.length} ${
+          selectedPages.length === 1 ? "page" : "pages"
+        }`,
       });
       setSelectedPages([]);
     } else {
@@ -335,7 +363,7 @@ export function PagesControl() {
               <LegacyCard>
                 <ResourceList
                   resourceName={resourceName}
-                  items={data}
+                  items={data && data}
                   renderItem={renderItem}
                   selectedItems={selectedPages}
                   onSelectionChange={setSelectedPages}
@@ -349,6 +377,9 @@ export function PagesControl() {
                     setConfirmModal={setConfirmModal}
                   />
                 )}
+                {toast.isOpen && (
+                  <ToastMessage toast={toast} setToast={setToast} />
+                )}
               </LegacyCard>
             </Tabs>
           </>
@@ -358,16 +389,14 @@ export function PagesControl() {
   );
 
   function renderItem(item) {
-    const {
-      id,
-      title,
-      created_at,
-      body_html,
-      admin_graphql_api_id,
-      published_at,
-    } = item;
-    const shortcutActions = admin_graphql_api_id
-      ? [{ content: "View Page", url: admin_graphql_api_id }]
+    const { id, title, created_at, body_html, published_at, handle } = item;
+    const shortcutActions = handle
+      ? [
+          {
+            content: "View Page",
+            url: `https://first-store-byt.myshopify.com/pages/${handle}`,
+          },
+        ]
       : null;
     return (
       <ResourceItem id={id} shortcutActions={shortcutActions} url={`/${id}`}>
