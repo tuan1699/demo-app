@@ -9,7 +9,7 @@ import {
   TextField,
   Tooltip,
 } from "@shopify/polaris";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 import { TypeMinor } from "@shopify/polaris-icons";
 import {
@@ -28,6 +28,8 @@ export function ContentFormater({ content, handleContentChange }) {
   const [activeHeading, setActiveHeading] = useState(false);
   const [activeAlign, setActiveAlign] = useState(false);
   const [activePickColor, setActivePickColor] = useState(false);
+  const editorRef = useRef(null);
+
   const toggleHeading = useCallback(
     () => setActiveHeading((activeHeading) => !activeHeading),
     []
@@ -69,13 +71,22 @@ export function ContentFormater({ content, handleContentChange }) {
     </Tooltip>
   );
 
+  const handleFormat = (command, value = null) => {
+    document.execCommand(command, false, value);
+    editorRef.current.focus();
+  };
+
+  function handleCommand(command, value) {
+    document.execCommand(command, false, value);
+    editorRef.current.focus();
+  }
+
   return (
     <div style={{ marginTop: "16px" }}>
       <Text>Content</Text>
       <LegacyCard>
         <LegacyCard>
           <div style={{ display: "flex", gap: "8px", padding: "8px" }}>
-            {/* <Button icon={TypeMinor} /> */}
             <ButtonGroup segmented>
               <div>
                 <Popover
@@ -89,37 +100,74 @@ export function ContentFormater({ content, handleContentChange }) {
                     items={[
                       {
                         content: "Paragraph",
+                        onAction: () => {
+                          handleCommand("insertParagraph", "p");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 1",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h1");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 2",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h2");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 3",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h3");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 4",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h4");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 5",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h5");
+                          setActiveHeading(false);
+                        },
                       },
                       {
                         content: "Heading 6",
+                        onAction: () => {
+                          handleCommand("formatBlock", "h6");
+                          setActiveHeading(false);
+                        },
                       },
                     ]}
                   />
                 </Popover>
               </div>
               <Tooltip content="Bold" dismissOnMouseOut>
-                <Button icon={<FaBold />} />
+                <Button
+                  icon={<FaBold />}
+                  onClick={() => handleFormat("bold")}
+                />
               </Tooltip>
               <Tooltip content="Italic" dismissOnMouseOut>
-                <Button icon={<FaItalic />} />
+                <Button
+                  icon={<FaItalic />}
+                  onClick={() => handleFormat("italic")}
+                />
               </Tooltip>
               <Tooltip content="Underline" dismissOnMouseOut>
-                <Button icon={<FaUnderline />} />
+                <Button
+                  icon={<FaUnderline />}
+                  onClick={() => handleFormat("underline")}
+                />
               </Tooltip>
             </ButtonGroup>
             <ButtonGroup segmented>
@@ -153,15 +201,15 @@ export function ContentFormater({ content, handleContentChange }) {
                     items={[
                       {
                         content: "Left align",
-                        // onAction: handleImportedAction,
+                        onAction: () => handleCommand("justifyLeft"),
                       },
                       {
                         content: "Center align",
-                        // onAction: handleExportedAction,
+                        onAction: () => handleCommand("justifyCenter"),
                       },
                       {
                         content: "Right align",
-                        // onAction: handleExportedAction,
+                        onAction: () => handleCommand("justifyRight"),
                       },
                     ]}
                   />
@@ -181,11 +229,19 @@ export function ContentFormater({ content, handleContentChange }) {
           </div>
         </LegacyCard>
         <LegacyCard.Subsection>
-          <TextField
+          <div
+            ref={editorRef}
+            contentEditable
+            className="editor-container"
+            spellCheck="false"
             value={content}
-            multiline={4}
-            onChange={handleContentChange}
-          ></TextField>
+            style={{
+              border: "2px solid #ccc",
+              padding: "5px",
+              lineHeight: "1.6",
+              outline: "none",
+            }}
+          ></div>
         </LegacyCard.Subsection>
       </LegacyCard>
     </div>

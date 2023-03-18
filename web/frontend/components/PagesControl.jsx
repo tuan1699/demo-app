@@ -24,10 +24,12 @@ import { EmptyStatePage } from "./EmptyState";
 import { useAuthenticatedFetch } from "@shopify/app-bridge-react";
 import { ModalComp } from "./ModalComp";
 import { ToastMessage } from "./ToastMessage";
+import { sortData } from "../ulities/sortData";
 
 export function PagesControl() {
   const fetch = useAuthenticatedFetch();
-  const [dataPages, setDataPages] = useState(null);
+  const [isEmptyData, setIsEmptyData] = useState(true);
+  const [dataPages, setDataPages] = useState(undefined);
   const [selectedPages, setSelectedPages] = useState([]);
   const [queryValue, setQueryValue] = useState("");
   const [visibleStatus, setVisibleStatus] = useState(null);
@@ -53,27 +55,41 @@ export function PagesControl() {
       panelID: "all-customers-content-1",
     },
   ]);
+  const [isFocus, setIsFocus] = useState(false);
   const [tabSelected, setTabSelected] = useState(0);
   const [isLoadingState, setIsLoading] = useState(true);
 
-  const { data, refetch } = useAppQuery({
+  const { refetch } = useAppQuery({
     url: `/api/pages?published_status=${visibleStatus}`,
     reactQueryOptions: {
       onSuccess: (data) => {
         setIsLoading(false);
-        setDataPages(data);
-        console.log(data);
-        console.log("test loading");
+        if (data.length === 0) {
+          setIsEmptyData(true);
+        } else {
+          setIsEmptyData(false);
+        }
+
+        let dataRemaining;
+        if (queryValue !== "") {
+          dataRemaining = data.filter((page) =>
+            page.title.toLowerCase().includes(queryValue.toLowerCase())
+          );
+        } else {
+          dataRemaining = [...data];
+        }
+
+        if (sortList) {
+          dataRemaining = sortData(dataRemaining, sortList.toString());
+        }
+
+        setDataPages(dataRemaining);
       },
       onError: (error) => {
         console.log(error);
       },
     },
   });
-
-  useEffect(() => {
-    console.log("test");
-  }, []);
 
   const handleHiddenPages = async (status) => {
     const { published } = status;
@@ -107,11 +123,14 @@ export function PagesControl() {
 
   const handleTabChange = useCallback((selectedTabIndex) => {
     if (selectedTabIndex === 0) {
+      refetch();
+      setQueryValue("");
       const newTabs = [...tabList];
       newTabs.splice(1);
       setTabList(newTabs);
       setTabSelected(selectedTabIndex);
       handleRemoveVisibleStatus();
+      setIsFocus(false);
     }
   }, []);
 
@@ -144,14 +163,35 @@ export function PagesControl() {
   );
 
   const handleFiltersQueryChange = useCallback((value) => {
+    setIsLoading(true);
+    refetch();
     setQueryValue(value);
+    const newTab = {
+      id: "customl-search",
+      content: "Custom search",
+      accessibilityLabel: "Custom search",
+      panelID: "customl-search",
+    };
+    const newTabs = [...tabList, newTab];
+    setTabList(newTabs);
+    setTabSelected(1);
+    setIsFocus(true);
   }, []);
 
   const handleQueryValueRemove = useCallback(() => {
+    refetch();
+    setIsLoading(true);
     setQueryValue("");
-  }, []);
+    const newTabs = [...tabList];
+    if (newTabs.length !== 1) {
+      newTabs.splice(1, 1);
+      setTabList(newTabs);
+      setTabSelected(0);
+    }
+  }, [tabList]);
 
   const handleVisibleStatusChange = useCallback((value) => {
+    setIsLoading(true);
     setVisibleStatus(value);
     const newTab = {
       id: "customl-search",
@@ -165,6 +205,7 @@ export function PagesControl() {
   }, []);
 
   const handleRemoveVisibleStatus = useCallback(() => {
+    setIsLoading(true);
     setVisibleStatus(null);
     const newTabs = [...tabList];
     if (newTabs.length !== 1) {
@@ -175,6 +216,9 @@ export function PagesControl() {
   }, [tabList]);
 
   const handleSortChange = useCallback((value) => {
+    console.log(value);
+    setIsLoading(true);
+    refetch();
     setSortList(value);
   }, []);
 
@@ -292,6 +336,7 @@ export function PagesControl() {
       onQueryChange={handleFiltersQueryChange}
       onQueryClear={handleQueryValueRemove}
       onClearAll={handleClearAll}
+      focused={isFocus}
     >
       <div style={{ paddingLeft: "8px", display: "flex", gap: "8px" }}>
         <Popover
@@ -341,7 +386,7 @@ export function PagesControl() {
   return (
     <>
       <LegacyCard>
-        {data === undefined ? (
+        {dataPages === undefined ? (
           <div
             style={{
               width: "100%",
@@ -349,9 +394,9 @@ export function PagesControl() {
               textAlign: "center",
             }}
           >
-            <Spinner accessibilityLabel="Spinner example" size="large" />
+            <Spinner size="large" />
           </div>
-        ) : data && data?.length === 0 && !visibleStatus ? (
+        ) : isEmptyData && !visibleStatus ? (
           <EmptyStatePage />
         ) : (
           <>
@@ -363,7 +408,7 @@ export function PagesControl() {
               <LegacyCard>
                 <ResourceList
                   resourceName={resourceName}
-                  items={data && data}
+                  items={dataPages}
                   renderItem={renderItem}
                   selectedItems={selectedPages}
                   onSelectionChange={setSelectedPages}

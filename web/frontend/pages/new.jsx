@@ -155,41 +155,6 @@ export default function CreatePage() {
                 content={content}
                 handleContentChange={handleContentChange}
               />
-              {/* <div style={{ marginTop: "16px" }}>
-                <Text>Content</Text>
-                <LegacyCard>
-                  <LegacyCard>
-                    <div
-                      style={{ display: "flex", gap: "8px", padding: "8px" }}
-                    >
-                      <ButtonGroup segmented>
-                        <Button icon={TypeMinor} />
-                        <Button icon={<FaBold />} />
-                        <Button icon={<FaItalic />} />
-                        <Button icon={<FaUnderline />} />
-                      </ButtonGroup>
-                      <ButtonGroup segmented>
-                        <Button icon={<FaListUl />} />
-                        <Button icon={<FaListOl />} />
-                        <Button icon={<FaAlignRight />} />
-                        <Button icon={<FaAlignLeft />} />
-                      </ButtonGroup>
-
-                      <ButtonGroup segmented>
-                        <Button icon={<FaAlignRight />} />
-                        <Button icon={<FaAlignLeft />} />
-                      </ButtonGroup>
-                    </div>
-                  </LegacyCard>
-                  <LegacyCard.Subsection>
-                    <TextField
-                      value={content}
-                      multiline={4}
-                      onChange={handleContentChange}
-                    ></TextField>
-                  </LegacyCard.Subsection>
-                </LegacyCard>
-              </div> */}
             </LegacyCard>
             <SearchEngine title={title} content={content} />
           </Layout.Section>
