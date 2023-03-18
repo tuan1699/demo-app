@@ -153,12 +153,12 @@ export function PagesControl() {
 
   const saveBtn = (
     <Button
-      disabled={visibleStatus ? false : true}
+      disabled={visibleStatus || queryValue !== "" ? false : true}
       icon={visibleStatus ? StarOutlineMinor : FavoriteMajor}
       onClick={togglePopoverSaveActive}
       disclosure
     >
-      {visibleStatus ? "Save Filter" : "Saved"}
+      {visibleStatus || queryValue !== "" ? "Save Filter" : "Saved"}
     </Button>
   );
 

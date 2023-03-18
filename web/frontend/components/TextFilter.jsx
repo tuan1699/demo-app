@@ -11,9 +11,11 @@ export function TextFilter({ tagname, togglePopoverSaveActive }) {
   );
   return (
     <>
-      <div style={{ marginBottom: "10px" }}>
-        <Tag>Visibility is {tagname}</Tag>
-      </div>
+      {tagname && (
+        <div style={{ marginBottom: "10px" }}>
+          <Tag>Visibility is {tagname}</Tag>
+        </div>
+      )}
       <TextField
         label="Save as"
         type="email"
