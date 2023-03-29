@@ -5,11 +5,12 @@ import {
   ColorPicker,
   LegacyCard,
   Popover,
+  Tabs,
   Text,
   TextField,
   Tooltip,
 } from "@shopify/polaris";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { TypeMinor } from "@shopify/polaris-icons";
 import {
@@ -23,12 +24,37 @@ import {
   FaIndent,
 } from "react-icons/fa";
 import { MdFormatColorText } from "react-icons/md";
+import convertHSL from "../ulities/covertHSL";
 
-export function ContentFormater({ content, handleContentChange }) {
+export function ContentFormater({ content, editorRef }) {
   const [activeHeading, setActiveHeading] = useState(false);
   const [activeAlign, setActiveAlign] = useState(false);
   const [activePickColor, setActivePickColor] = useState(false);
-  const editorRef = useRef(null);
+  const [tabColor, setTabColor] = useState(0);
+
+  useEffect(() => {
+    editorRef.current.innerHTML = content;
+    console.log(editorRef.current);
+  }, []);
+
+  const handleChangeTab = useCallback((selectTabColorIndex) => {
+    setTabColor(selectTabColorIndex);
+  }, []);
+
+  const tabColors = [
+    {
+      id: "color",
+      content: "Text",
+      accessibilityLabel: "Text",
+      panelID: "Text",
+    },
+    {
+      id: "bgcolor",
+      content: "Background",
+      accessibilityLabel: "Background",
+      panelID: "Background",
+    },
+  ];
 
   const toggleHeading = useCallback(
     () => setActiveHeading((activeHeading) => !activeHeading),
@@ -44,6 +70,12 @@ export function ContentFormater({ content, handleContentChange }) {
   );
 
   const [color, setColor] = useState({
+    hue: 120,
+    brightness: 1,
+    saturation: 1,
+  });
+
+  const [bgColor, setBgColor] = useState({
     hue: 120,
     brightness: 1,
     saturation: 1,
@@ -172,19 +204,31 @@ export function ContentFormater({ content, handleContentChange }) {
             </ButtonGroup>
             <ButtonGroup segmented>
               <Tooltip content="Bulleted list" dismissOnMouseOut>
-                <Button icon={<FaListUl />} />
+                <Button
+                  icon={<FaListUl />}
+                  onClick={() => handleFormat("insertOrderedList")}
+                />
               </Tooltip>
 
               <Tooltip content="Numbered list" dismissOnMouseOut>
-                <Button icon={<FaListOl />} />
+                <Button
+                  icon={<FaListOl />}
+                  onClick={() => handleFormat("insertUnorderedList")}
+                />
               </Tooltip>
 
               <Tooltip content="Outdent" dismissOnMouseOut>
-                <Button icon={<FaOutdent />} />
+                <Button
+                  icon={<FaOutdent />}
+                  onClick={() => handleFormat("outdent")}
+                />
               </Tooltip>
 
               <Tooltip content="Indent" dismissOnMouseOut>
-                <Button icon={<FaIndent />} />
+                <Button
+                  icon={<FaIndent />}
+                  onClick={() => handleFormat("indent")}
+                />
               </Tooltip>
             </ButtonGroup>
 
@@ -222,7 +266,55 @@ export function ContentFormater({ content, handleContentChange }) {
                   autofocusTarget="first-node"
                   onClose={togglePickColor}
                 >
-                  <ColorPicker onChange={setColor} color={color} />
+                  <div
+                    style={{
+                      width: "220px",
+                    }}
+                  >
+                    <Tabs
+                      tabs={tabColors}
+                      selected={tabColor}
+                      onSelect={handleChangeTab}
+                      fitted
+                    ></Tabs>
+                  </div>
+                  <div style={{ padding: "10px" }}>
+                    <ColorPicker
+                      onChange={(value) => {
+                        if (tabColor === 0) {
+                          setColor(value);
+                          console.log(value);
+                          handleCommand("foreColor", convertHSL(color));
+                        } else {
+                          setBgColor(value);
+                          console.log(value);
+                          handleCommand("backColor", convertHSL(color));
+                        }
+                      }}
+                      color={tabColor === 0 ? color : bgColor}
+                    />
+                  </div>
+                  <div style={{ width: "80%", padding: "0px 10px 20px 10px" }}>
+                    <TextField
+                      value={
+                        tabColor === 0 ? convertHSL(color) : convertHSL(bgColor)
+                      }
+                      prefix={
+                        <div
+                          style={{
+                            width: "20px",
+                            height: "20px",
+                            background: `${
+                              tabColor === 0
+                                ? convertHSL(color)
+                                : convertHSL(bgColor)
+                            }`,
+                            borderRadius: "10px",
+                          }}
+                        ></div>
+                      }
+                    />
+                  </div>
                 </Popover>
               </div>
             </ButtonGroup>
@@ -234,7 +326,6 @@ export function ContentFormater({ content, handleContentChange }) {
             contentEditable
             className="editor-container"
             spellCheck="false"
-            value={content}
             style={{
               border: "2px solid #ccc",
               padding: "5px",

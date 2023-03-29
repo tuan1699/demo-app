@@ -13,7 +13,7 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   ContentFormater,
@@ -30,6 +30,8 @@ export default function CreatePage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [theme, setTheme] = useState("today");
+  const editorRef = useRef(null);
+
   const handleTitleChange = useCallback((value) => {
     setTitle(value);
     setIsError(false);
@@ -57,7 +59,6 @@ export default function CreatePage() {
   const handleThemeChange = useCallback((value) => setTheme(value), []);
 
   const handleChange = useCallback((value) => {
-    console.log(value);
     setVisibleStatus(value);
     if (value.toString() === "Visible") {
       setIsSetDate(false);
@@ -68,14 +69,13 @@ export default function CreatePage() {
     if (title.trim() === "") {
       setIsError(true);
     } else {
-      // const publishedDate = new Date().toLocaleDateString();
       setLoading(true);
       const newPage = {
         title: title,
-        body_html: content,
-        // published:
-        //   visibleStatus?.toString() !== "Visible" ? null : publishedDate,
+        body_html: editorRef.current.innerHTML,
+        published: visibleStatus?.toString() !== "Visible" ? null : true,
       };
+
       console.log(newPage);
       fetch("/api/pages", {
         method: "POST",
@@ -92,7 +92,6 @@ export default function CreatePage() {
         .then((data) => {
           setLoading(false);
           console.log("OKE");
-          console.log(data);
           setToast({
             ...toast,
             isOpen: true,
@@ -103,7 +102,6 @@ export default function CreatePage() {
           }, 1000);
         })
         .catch((err) => {
-          console.log("NOT OK");
           console.log(err);
         });
     }
@@ -154,6 +152,7 @@ export default function CreatePage() {
               <ContentFormater
                 content={content}
                 handleContentChange={handleContentChange}
+                editorRef={editorRef}
               />
             </LegacyCard>
             <SearchEngine title={title} content={content} />
@@ -166,7 +165,11 @@ export default function CreatePage() {
                   {
                     label:
                       visibleStatus?.toString() === `Visible`
-                        ? `Visible (as of ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()})`
+                        ? `Visible (as of ${new Date().toLocaleDateString()}, ${new Date()
+                            .toLocaleTimeString()
+                            .slice(0, 4)} ${new Date()
+                            .toLocaleTimeString()
+                            .slice(-3)} EDT)`
                         : `Visible`,
                     value: "Visible",
                   },
@@ -224,7 +227,25 @@ export default function CreatePage() {
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <ButtonGroup>
-          <Button onClick={() => console.log("Cancel")}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (title.trim() !== "" || content.trim() !== "") {
+                setConfirmModal({
+                  ...confirmModal,
+                  isOpen: true,
+                  title: "You have unsaved changes",
+                  subTitle:
+                    "If you leave this page, all unsaved changes will be lost.",
+                  contentAction: "Leave page",
+                  onConfirm: () => navigate("/"),
+                });
+              } else {
+                navigate("/");
+              }
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             primary
             onClick={handleCreatePage}

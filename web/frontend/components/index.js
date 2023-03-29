@@ -12,3 +12,4 @@ export { SearchEngine } from "./SearchEngine";
 export { ModalComp } from "./ModalComp";
 export { ToastMessage } from "./ToastMessage";
 export { ContentFormater } from "./ContentFormater";
+export { SkeletonDetail } from "./SkeletonDetail";

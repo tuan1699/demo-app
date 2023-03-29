@@ -8,10 +8,8 @@ import {
   ResourceList,
   Tabs,
   Spinner,
-  Toast,
-  Frame,
 } from "@shopify/polaris";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   FavoriteMajor,
   SortMinor,
@@ -93,7 +91,6 @@ export function PagesControl() {
 
   const handleHiddenPages = async (status) => {
     const { published } = status;
-    console.log(published);
     setIsLoading(true);
     const res = await fetch(`/api/pages?id=${selectedPages.toString()}`, {
       method: "PUT",
@@ -108,7 +105,6 @@ export function PagesControl() {
     if (res.ok) {
       setSelectedPages([]);
       refetch();
-      console.log("OK");
       setToast({
         ...toast,
         isOpen: true,
@@ -162,21 +158,34 @@ export function PagesControl() {
     </Button>
   );
 
-  const handleFiltersQueryChange = useCallback((value) => {
-    setIsLoading(true);
-    refetch();
-    setQueryValue(value);
-    const newTab = {
-      id: "customl-search",
-      content: "Custom search",
-      accessibilityLabel: "Custom search",
-      panelID: "customl-search",
-    };
-    const newTabs = [...tabList, newTab];
-    setTabList(newTabs);
-    setTabSelected(1);
-    setIsFocus(true);
-  }, []);
+  const handleFiltersQueryChange = useCallback(
+    (value) => {
+      setIsLoading(true);
+      refetch();
+      setQueryValue(value);
+      if (tabList.length === 1) {
+        const newTab = {
+          id: "customl-search",
+          content: "Custom search",
+          accessibilityLabel: "Custom search",
+          panelID: "customl-search",
+        };
+        const newTabs = [...tabList, newTab];
+        setTabList(newTabs);
+        setTabSelected(1);
+        setIsFocus(true);
+      }
+      if (value.trim() === "") {
+        const newTabs = [...tabList];
+        if (newTabs.length !== 1) {
+          newTabs.splice(1, 1);
+          setTabList(newTabs);
+          setTabSelected(0);
+        }
+      }
+    },
+    [queryValue]
+  );
 
   const handleQueryValueRemove = useCallback(() => {
     refetch();
@@ -216,7 +225,6 @@ export function PagesControl() {
   }, [tabList]);
 
   const handleSortChange = useCallback((value) => {
-    console.log(value);
     setIsLoading(true);
     refetch();
     setSortList(value);
@@ -228,14 +236,12 @@ export function PagesControl() {
   }, [handleRemoveVisibleStatus]);
 
   const handleDeletePage = async () => {
-    console.log("Delete Page");
     const res = await fetch(`/api/pages?id=${selectedPages.toString()}`, {
       method: "DELETE",
     });
 
     if (res.ok) {
       refetch();
-      console.log("OK");
       setConfirmModal({
         ...confirmModal,
         isOpen: false,

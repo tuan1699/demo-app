@@ -1,7 +1,8 @@
 import { LegacyCard, Text, TextField } from "@shopify/polaris";
 import React, { useCallback, useEffect, useState } from "react";
+import { parserHTML } from "../ulities/parserHTML";
 
-export function SearchEngine({ title, content }) {
+export function SearchEngine({ title, content = "" }) {
   const [editWithSeo, setEditWithSeo] = useState(false);
   const [titleSeo, setTitleSeo] = useState(title);
   const [titleSeoDefault, setTitleSeoDefault] = useState(title);
@@ -38,17 +39,17 @@ export function SearchEngine({ title, content }) {
       ]}
     >
       <LegacyCard.Section>
-        {titleSeo.trim() !== "" && descrSeo.trim() !== "" ? (
+        {titleSeo.trim() !== "" && parserHTML(descrSeo).trim() !== "" ? (
           <div>
             <p style={{ fontSize: "18px", color: "#1a0dab" }}>{titleSeo}</p>
             <Text
               color="success"
               as="h6"
             >{`https://first-store-byt.myshopify.com/pages/${urlSeo}`}</Text>
-            <p style={{ fontSize: "13px" }}>{descrSeo}</p>
+            <p style={{ fontSize: "13px" }}>{parserHTML(descrSeo)}</p>
           </div>
         ) : titleSeo.trim() === "" &&
-          descrSeo.trim() === "" &&
+          parserHTML(descrSeo).trim() === "" &&
           title.trim() !== "" &&
           content.trim() !== "" ? (
           <div>
@@ -65,13 +66,13 @@ export function SearchEngine({ title, content }) {
               titleSeo.trim() !== "" || title.trim() !== "" ? "" : "a title"
             } ${
               titleSeo.trim() === "" &&
-              descrSeo.trim() === "" &&
+              parserHTML(descrSeo).trim() === "" &&
               title.trim() === "" &&
               content.trim() === ""
                 ? "and"
                 : ""
             }  ${
-              descrSeo.trim() !== "" || content.trim() !== ""
+              parserHTML(descrSeo).trim() !== "" || content.trim() !== ""
                 ? ""
                 : "description"
             } to see how this Page might appear in a
@@ -79,6 +80,7 @@ export function SearchEngine({ title, content }) {
           </p>
         )}
       </LegacyCard.Section>
+
       {editWithSeo && (
         <LegacyCard.Section>
           <div style={{ marginBottom: "10px" }}>
@@ -95,10 +97,10 @@ export function SearchEngine({ title, content }) {
             <TextField
               label="Description"
               multiline={4}
-              value={descrSeo}
+              value={parserHTML(descrSeo)}
               placeholder={descrSeoDefault}
               onChange={handleChangeDecrSeo}
-              helpText={`${descrSeo.length} of 320 characters used`}
+              helpText={`${parserHTML(descrSeo).length} of 320 characters used`}
             />
           </div>
           <div style={{ marginBottom: "10px" }}>

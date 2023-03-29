@@ -12,7 +12,7 @@ div[contenteditable="true"] {
 }
 
 div[contenteditable="true"]:focus {
-  border: 2px solid #0089c4 !important;
+  border: 2px solid #458fff !important;
 }
 
 div[contenteditable="true"] h1 {

@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useAppQuery } from "../hooks";
 
 import { useAuthenticatedFetch, useNavigate } from "@shopify/app-bridge-react";
@@ -14,11 +14,7 @@ import {
   LegacyCard,
   Page,
   Select,
-  SkeletonBodyText,
-  SkeletonDisplayText,
-  SkeletonPage,
   Text,
-  TextContainer,
   TextField,
 } from "@shopify/polaris";
 
@@ -33,12 +29,15 @@ import {
   FaAlignLeft,
 } from "react-icons/fa";
 import {
+  ContentFormater,
   DueDatePicker,
   DueTimePicker,
   ModalComp,
   SearchEngine,
+  SkeletonDetail,
   ToastMessage,
 } from "../components";
+import { isChangeData } from "../ulities/isChangeData";
 
 export default function PageEdit() {
   const fetch = useAuthenticatedFetch();
@@ -61,11 +60,13 @@ export default function PageEdit() {
   const handleTitleChange = useCallback((value) => setTitle(value), []);
   const handleContentChange = useCallback((value) => setContent(value), []);
   const [visibleStatus, setVisibleStatus] = useState(["Visible"]);
+  const [initVisible, setInitVisible] = useState([]);
   const [isSetDate, setIsSetDate] = useState(false);
   const [toast, setToast] = useState({
     isOpen: false,
     message: "",
   });
+  const editorRef = useRef(null);
 
   const { data, refetch } = useAppQuery({
     url: `/api/pages?id=${id}`,
@@ -75,6 +76,8 @@ export default function PageEdit() {
         setInitData(data);
         setTitle(data.title);
         setContent(data.body_html);
+        setVisibleStatus(data.published_at ? ["Visible"] : ["Hidden"]);
+        setInitVisible(data.published_at ? ["Visible"] : ["Hidden"]);
         setIsLoading(false);
       },
       onError: (error) => {
@@ -102,7 +105,7 @@ export default function PageEdit() {
     const updatedData = {
       title: title,
       body_html: content,
-      published: visibleStatus?.toString() !== "Visible" ? false : true,
+      published: visibleStatus?.toString() !== "Visible" ? null : true,
     };
     setLoadingUpdate(true);
     console.log(updatedData);
@@ -154,54 +157,7 @@ export default function PageEdit() {
     }
   };
 
-  if (isLoading)
-    return (
-      <SkeletonPage primaryAction>
-        <Layout>
-          <Layout.Section>
-            <LegacyCard sectioned>
-              <SkeletonBodyText />
-            </LegacyCard>
-            <LegacyCard sectioned>
-              <TextContainer>
-                <SkeletonDisplayText size="small" />
-                <SkeletonBodyText />
-              </TextContainer>
-            </LegacyCard>
-            <LegacyCard sectioned>
-              <TextContainer>
-                <SkeletonDisplayText size="small" />
-                <SkeletonBodyText />
-              </TextContainer>
-            </LegacyCard>
-          </Layout.Section>
-          <Layout.Section secondary>
-            <LegacyCard>
-              <LegacyCard.Section>
-                <TextContainer>
-                  <SkeletonDisplayText size="small" />
-                  <SkeletonBodyText lines={2} />
-                </TextContainer>
-              </LegacyCard.Section>
-              <LegacyCard.Section>
-                <SkeletonBodyText lines={1} />
-              </LegacyCard.Section>
-            </LegacyCard>
-            <LegacyCard subdued>
-              <LegacyCard.Section>
-                <TextContainer>
-                  <SkeletonDisplayText size="small" />
-                  <SkeletonBodyText lines={2} />
-                </TextContainer>
-              </LegacyCard.Section>
-              <LegacyCard.Section>
-                <SkeletonBodyText lines={2} />
-              </LegacyCard.Section>
-            </LegacyCard>
-          </Layout.Section>
-        </Layout>
-      </SkeletonPage>
-    );
+  if (isLoading) return <SkeletonDetail />;
 
   return (
     <Page
@@ -210,7 +166,7 @@ export default function PageEdit() {
           console.log("check");
           if (
             title.trim() !== initData.title ||
-            content.trim() !== initData.body_html
+            editorRef.current.innerHTML !== initData.body_html
           ) {
             setConfirmModal({
               ...confirmModal,
@@ -256,41 +212,11 @@ export default function PageEdit() {
                 autoComplete="email"
                 placeholder="e.g. Contact us, Sizing chart, FAQs"
               />
-              <div style={{ marginTop: "16px" }}>
-                <Text>Content</Text>
-                <LegacyCard>
-                  <LegacyCard>
-                    <div
-                      style={{ display: "flex", gap: "8px", padding: "8px" }}
-                    >
-                      <ButtonGroup segmented>
-                        <Button icon={TypeMinor} />
-                        <Button icon={<FaBold />} />
-                        <Button icon={<FaItalic />} />
-                        <Button icon={<FaUnderline />} />
-                      </ButtonGroup>
-                      <ButtonGroup segmented>
-                        <Button icon={<FaListUl />} />
-                        <Button icon={<FaListOl />} />
-                        <Button icon={<FaAlignRight />} />
-                        <Button icon={<FaAlignLeft />} />
-                      </ButtonGroup>
-
-                      <ButtonGroup segmented>
-                        <Button icon={<FaAlignRight />} />
-                        <Button icon={<FaAlignLeft />} />
-                      </ButtonGroup>
-                    </div>
-                  </LegacyCard>
-                  <LegacyCard.Subsection>
-                    <TextField
-                      value={content}
-                      multiline={4}
-                      onChange={handleContentChange}
-                    ></TextField>
-                  </LegacyCard.Subsection>
-                </LegacyCard>
-              </div>
+              <ContentFormater
+                content={content}
+                handleContentChange={handleContentChange}
+                editorRef={editorRef}
+              />
             </LegacyCard>
             <SearchEngine title={title} content={content} />
           </Layout.Section>
@@ -302,7 +228,19 @@ export default function PageEdit() {
                   {
                     label:
                       visibleStatus?.toString() === `Visible`
-                        ? `Visible (as of ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()})`
+                        ? `Visible ${
+                            initData.published_at
+                              ? `(as of ${new Date(
+                                  initData.published_at
+                                ).toLocaleDateString()}, ${new Date(
+                                  initData.published_at
+                                )
+                                  .toLocaleTimeString()
+                                  .slice(0, 4)} ${new Date()
+                                  .toLocaleTimeString()
+                                  .slice(-3)} EDT)`
+                              : ""
+                          }`
                         : `Visible`,
                     value: "Visible",
                   },
@@ -381,11 +319,14 @@ export default function PageEdit() {
             primary
             disabled={
               title.trim() !== initData.title ||
-              content.trim() !== initData.body_html
+              // editorRef.current.innerHTML !== initData.body_html ||
+              initVisible.toString() !== visibleStatus.toString()
                 ? false
                 : true
             }
-            onClick={handleUpdatePage}
+            onClick={() => {
+              handleUpdatePage();
+            }}
             loading={loadingUpdate}
           >
             Save

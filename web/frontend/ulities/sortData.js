@@ -18,15 +18,21 @@ export const sortData = (arr = [], sortBy) => {
 
     case "oldest": {
       arr.sort((a, b) => {
-        if (a.updated_at >= b.updated_at) return -1;
-        else return 1;
+        if (
+          new Date(a.updated_at).getTime() >= new Date(b.updated_at).getTime()
+        )
+          return 1;
+        else return -1;
       });
       break;
     }
 
     case "newest": {
       arr.sort((a, b) => {
-        if (a.updated_at >= b.updated_at) return 1;
+        if (
+          new Date(a.updated_at).getTime() >= new Date(b.updated_at).getTime()
+        )
+          return -1;
         else return 1;
       });
       break;
